@@ -1,0 +1,20 @@
+{
+  "name": "job-portal-api-gateway",
+  "version": "1.0.0",
+  "description": "Job Portal web client-server application with a basic API Gateway, two microservices and JSON-file NoSQL databases",
+  "main": "start-all.js",
+  "scripts": {
+    "start": "node init && node start-all.js",
+    "gateway": "node gateway/gateway.js",
+    "jobs": "node jobs-service/server.js",
+    "applicants": "node applicants-service/server.js",
+    "reset": "node reset-data.js",
+    "test": "node tests/run-curl-tests.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

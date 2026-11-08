@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "title": "Junior Node.js Developer",
+    "company": "Bdtech Solutions",
+    "location": "Dhaka",
+    "type": "Full-time",
+    "salary": 45000,
+    "status": "open",
+    "postedAt": "2026-11-01T09:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "title": "Flutter Developer Intern",
+    "company": "AppNest",
+    "location": "Chattogram",
+    "type": "Internship",
+    "salary": 15000,
+    "status": "open",
+    "postedAt": "2026-11-02T10:30:00.000Z"
+  },
+  {
+    "id": 3,
+    "title": "UI/UX Designer",
+    "company": "PixelCraft Studio",
+    "location": "Dhaka",
+    "type": "Remote",
+    "salary": 60000,
+    "status": "closed",
+    "postedAt": "2026-10-20T08:15:00.000Z"
+  }
+]

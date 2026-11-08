@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "name": "Rahim Uddin",
+    "email": "rahim@example.com",
+    "phone": "+8801711000001",
+    "jobId": 1,
+    "jobTitle": "Junior Node.js Developer",
+    "status": "Pending",
+    "appliedAt": "2026-11-03T11:00:00.000Z"
+  },
+  {
+    "id": 2,
+    "name": "Karim Hasan",
+    "email": "karim@example.com",
+    "phone": null,
+    "jobId": 2,
+    "jobTitle": "Flutter Developer Intern",
+    "status": "Shortlisted",
+    "appliedAt": "2026-11-04T14:20:00.000Z"
+  }
+]

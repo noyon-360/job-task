@@ -1,0 +1,12 @@
+
+{
+  "api_inv": {
+    "url": "http://localhost:3001"
+  },
+  "api_inv_2": {
+    "url": "http://localhost:3001"
+  },
+  "api_inv_3": {
+    "url": "http://localhost:3001"
+  }
+}

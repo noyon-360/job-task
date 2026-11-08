@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Portal — Web Client</title>
+  <style>
+    :root { --ink:#1d2433; --muted:#667085; --line:#e4e7ec; --brand:#2453d6; --bg:#f6f7fb; --ok:#127a3d; --bad:#b42318; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background:var(--bg); color:var(--ink); }
+    header { background:#fff; border-bottom:1px solid var(--line); padding:16px 28px; display:flex; justify-content:space-between; align-items:center; }
+    header h1 { margin:0; font-size:20px; }
+    header small { color:var(--muted); }
+    main { display:grid; grid-template-columns: 1fr 1fr; gap:20px; padding:20px 28px; max-width:1300px; margin:auto; }
+    section { background:#fff; border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+    h2 { margin:0 0 12px; font-size:16px; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:7px 6px; border-bottom:1px solid var(--line); }
+    th { color:var(--muted); font-weight:600; }
+    form { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+    input, select, button { font:inherit; font-size:13px; padding:7px 9px; border:1px solid var(--line); border-radius:6px; }
+    button { background:var(--brand); color:#fff; border:none; cursor:pointer; }
+    button.ghost { background:#fff; color:var(--bad); border:1px solid var(--line); padding:4px 8px; }
+    .row { display:flex; gap:8px; margin-bottom:10px; }
+    .tag { padding:2px 7px; border-radius:20px; font-size:11px; background:#eef2ff; }
+    .tag.closed { background:#fdecea; color:var(--bad); }
+    .wide { grid-column: 1 / -1; }
+    pre { background:#0f172a; color:#e2e8f0; padding:12px; border-radius:8px; font-size:12px; overflow:auto; max-height:260px; margin:0; }
+    #status { font-weight:600; margin-bottom:6px; font-size:13px; }
+    .ok { color:var(--ok); } .bad { color:var(--bad); }
+  </style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Job Portal</h1>
+    <small>Web client · every request goes through the API Gateway (port 3000)</small>
+  </div>
+  <button onclick="checkHealth()">Check services</button>
+</header>
+
+<main>
+  <section>
+    <h2>Jobs</h2>
+    <div class="row">
+      <input id="fLocation" placeholder="Location (e.g. Dhaka)">
+      <select id="fType">
+        <option value="">Any type</option>
+        <option>Full-time</option><option>Part-time</option><option>Internship</option><option>Contract</option><option>Remote</option>
+      </select>
+      <button onclick="loadJobs()">Search</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Title</th><th>Company</th><th>Location</th><th>Type</th><th>Status</th><th></th></tr></thead>
+      <tbody id="jobsBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Applicants</h2>
+    <div class="row">
+      <input id="fJobId" placeholder="Filter by job id">
+      <button onclick="loadApplicants()">Load</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Job</th><th>Status</th><th></th></tr></thead>
+      <tbody id="appsBody"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Post a job (POST /jobs)</h2>
+    <form id="jobForm">
+      <input name="title" placeholder="Title" required>
+      <input name="company" placeholder="Company" required>
+      <input name="location" placeholder="Location" required>
+      <select name="type">
+        <option>Full-time</option><option>Part-time</option><option>Internship</option><option>Contract</option><option>Remote</option>
+      </select>
+      <input name="salary" type="number" min="0" placeholder="Salary (BDT)">
+      <button type="submit">Create job</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>Apply for a job (POST /applicants)</h2>
+    <form id="applyForm">
+      <input name="name" placeholder="Full name" required>
+      <input name="email" placeholder="Email" required>
+      <input name="phone" placeholder="Phone (optional)">
+      <input name="jobId" type="number" min="1" placeholder="Job id" required>
+      <button type="submit" class="wide">Submit application</button>
+    </form>
+  </section>
+
+  <section class="wide">
+    <h2>Last gateway response</h2>
+    <div id="status">—</div>
+    <pre id="output">Responses from the API Gateway will appear here.</pre>
+  </section>
+</main>
+
+<script>
+  // All calls are relative, so they go to the gateway that served this page.
+  async function call(method, url, body) {
+    if (location.protocol === 'file:') {
+      const status = document.getElementById('status');
+      status.textContent = 'Page opened as a local file — requests cannot reach the gateway';
+      status.className = 'bad';
+      document.getElementById('output').textContent =
+        'Start the app with "node start-all.js" and open http://localhost:3000 in your browser.';
+      return { ok: false, data: {} };
+    }
+    const options = { method, headers: {} };
+    if (body !== undefined) {
+      options.headers['Content-Type'] = 'application/json';
+      options.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, options);
+    const data = await res.json().catch(() => ({}));
+    const status = document.getElementById('status');
+    status.textContent = `${method} ${url} → ${res.status} ${res.statusText}`;
+    status.className = res.ok ? 'ok' : 'bad';
+    document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    return { ok: res.ok, data };
+  }
+
+  function cell(row, text) {
+    const td = document.createElement('td');
+    td.textContent = text ?? '';
+    row.appendChild(td);
+    return td;
+  }
+
+  async function loadJobs() {
+    const q = new URLSearchParams();
+    const loc = document.getElementById('fLocation').value.trim();
+    const type = document.getElementById('fType').value;
+    if (loc) q.set('location', loc);
+    if (type) q.set('type', type);
+    const { ok, data } = await call('GET', '/jobs' + (q.toString() ? '?' + q : ''));
+    const body = document.getElementById('jobsBody');
+    body.innerHTML = '';
+    if (!ok) return;
+    data.data.forEach((job) => {
+      const tr = document.createElement('tr');
+      [job.id, job.title, job.company, job.location, job.type].forEach((v) => cell(tr, v));
+      const st = cell(tr, '');
+      const tag = document.createElement('span');
+      tag.className = 'tag' + (job.status === 'closed' ? ' closed' : '');
+      tag.textContent = job.status;
+      st.appendChild(tag);
+      const actions = cell(tr, '');
+      const toggle = document.createElement('button');
+      toggle.className = 'ghost';
+      toggle.textContent = job.status === 'open' ? 'Close' : 'Reopen';
+      toggle.onclick = async () => { await call('PUT', '/jobs/' + job.id, { status: job.status === 'open' ? 'closed' : 'open' }); loadJobs(); };
+      const del = document.createElement('button');
+      del.className = 'ghost';
+      del.textContent = 'Delete';
+      del.onclick = async () => { await call('DELETE', '/jobs/' + job.id); loadJobs(); };
+      actions.append(toggle, ' ', del);
+      body.appendChild(tr);
+    });
+  }
+
+  async function loadApplicants() {
+    const jobId = document.getElementById('fJobId').value.trim();
+    const { ok, data } = await call('GET', '/applicants' + (jobId ? '?jobId=' + encodeURIComponent(jobId) : ''));
+    const body = document.getElementById('appsBody');
+    body.innerHTML = '';
+    if (!ok) return;
+    data.data.forEach((a) => {
+      const tr = document.createElement('tr');
+      [a.id, a.name, a.email, `#${a.jobId} ${a.jobTitle}`].forEach((v) => cell(tr, v));
+      const st = cell(tr, '');
+      const select = document.createElement('select');
+      ['Pending', 'Shortlisted', 'Rejected', 'Hired'].forEach((s) => {
+        const o = document.createElement('option');
+        o.textContent = s;
+        if (s === a.status) o.selected = true;
+        select.appendChild(o);
+      });
+      select.onchange = async () => { await call('PUT', '/applicants/' + a.id, { status: select.value }); loadApplicants(); };
+      st.appendChild(select);
+      const actions = cell(tr, '');
+      const del = document.createElement('button');
+      del.className = 'ghost';
+      del.textContent = 'Delete';
+      del.onclick = async () => { await call('DELETE', '/applicants/' + a.id); loadApplicants(); };
+      actions.appendChild(del);
+      body.appendChild(tr);
+    });
+  }
+
+  document.getElementById('jobForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const job = { title: f.get('title'), company: f.get('company'), location: f.get('location'), type: f.get('type') };
+    if (f.get('salary')) job.salary = Number(f.get('salary'));
+    const { ok } = await call('POST', '/jobs', job);
+    if (ok) { e.target.reset(); loadJobs(); }
+  };
+
+  document.getElementById('applyForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const app = { name: f.get('name'), email: f.get('email'), jobId: Number(f.get('jobId')) };
+    if (f.get('phone')) app.phone = f.get('phone');
+    const { ok } = await call('POST', '/applicants', app);
+    if (ok) { e.target.reset(); loadApplicants(); }
+  };
+
+  function checkHealth() { call('GET', '/health'); }
+
+  loadJobs().then(loadApplicants);
+</script>
+</body>
+</html>

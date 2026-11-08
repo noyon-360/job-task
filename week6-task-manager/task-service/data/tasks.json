@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "title": "Draw architecture diagram",
+    "description": "Client, API Gateway and two microservices",
+    "userId": 1,
+    "completed": true
+  },
+  {
+    "id": 2,
+    "title": "Write cURL test suite",
+    "description": "GET, POST, PUT, DELETE and a misspelt route",
+    "userId": 2,
+    "completed": false
+  }
+]

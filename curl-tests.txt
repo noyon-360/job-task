@@ -1,0 +1,1314 @@
+==============================================================================
+JOB PORTAL - CURL TEST FILE
+API Gateway: http://localhost:3000   (the ONLY port a client uses)
+Routes:      /jobs  -> Jobs service        (internal)
+             /applicants -> Applicants service (internal)
+==============================================================================
+
+HOW TO RUN
+  1. npm install
+  2. npm run reset      (restore the starting data so ids match this file)
+  3. npm start          (starts both services and the gateway)
+  4. Open a second Command Prompt and run the commands below in order.
+     Add -i to any command to also see the HTTP status line and headers.
+     In PowerShell type curl.exe instead of curl.
+
+Starting data: jobs 1-3 (job 3 is closed), applicants 1-2.
+Every error response has the same shape:
+  { "success": false, "error": { "status": <code>, "message": "...", "details": ... } }
+
+##############################################################################
+A. GATEWAY BASICS
+##############################################################################
+
+TEST 1: Open the web client in the gateway (browser test: http://localhost:3000)
+Command : curl http://localhost:3000/
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  <!DOCTYPE html> ... (HTML page of the web client)
+------------------------------------------------------------------------------
+
+TEST 2: List all available routes
+Command : curl http://localhost:3000/api
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "gateway": "http://localhost:3000",
+    "routes": [
+      "GET    /jobs                (filters: ?location= &type= &status=)",
+      "GET    /jobs/:id",
+      "POST   /jobs",
+      "PUT    /jobs/:id",
+      "DELETE /jobs/:id",
+      "GET    /applicants          (filters: ?jobId= &status=)",
+      "GET    /applicants/:id",
+      "POST   /applicants",
+      "PUT    /applicants/:id",
+      "DELETE /applicants/:id",
+      "GET    /api                 (this list)",
+      "GET    /health              (status of each service)"
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 3: Health check - both services up
+Command : curl http://localhost:3000/health
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "gateway": "up",
+    "services": {
+      "jobs": "up",
+      "applicants": "up"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+B. JOBS ROUTE - VALID REQUESTS (GET, POST, PUT)
+##############################################################################
+
+TEST 4: GET all jobs
+Command : curl http://localhost:3000/jobs
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 3,
+    "data": [
+      {
+        "id": 1,
+        "title": "Junior Node.js Developer",
+        "company": "Bdtech Solutions",
+        "location": "Dhaka",
+        "type": "Full-time",
+        "salary": 45000,
+        "status": "open",
+        "postedAt": "2026-11-01T09:00:00.000Z"
+      },
+      {
+        "id": 2,
+        "title": "Flutter Developer Intern",
+        "company": "AppNest",
+        "location": "Chattogram",
+        "type": "Internship",
+        "salary": 15000,
+        "status": "open",
+        "postedAt": "2026-11-02T10:30:00.000Z"
+      },
+      {
+        "id": 3,
+        "title": "UI/UX Designer",
+        "company": "PixelCraft Studio",
+        "location": "Dhaka",
+        "type": "Remote",
+        "salary": 60000,
+        "status": "closed",
+        "postedAt": "2026-10-20T08:15:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 5: GET one job by id
+Command : curl http://localhost:3000/jobs/1
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "title": "Junior Node.js Developer",
+      "company": "Bdtech Solutions",
+      "location": "Dhaka",
+      "type": "Full-time",
+      "salary": 45000,
+      "status": "open",
+      "postedAt": "2026-11-01T09:00:00.000Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 6: GET jobs filtered by location
+Command : curl "http://localhost:3000/jobs?location=Dhaka"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 2,
+    "data": [
+      {
+        "id": 1,
+        "title": "Junior Node.js Developer",
+        "company": "Bdtech Solutions",
+        "location": "Dhaka",
+        "type": "Full-time",
+        "salary": 45000,
+        "status": "open",
+        "postedAt": "2026-11-01T09:00:00.000Z"
+      },
+      {
+        "id": 3,
+        "title": "UI/UX Designer",
+        "company": "PixelCraft Studio",
+        "location": "Dhaka",
+        "type": "Remote",
+        "salary": 60000,
+        "status": "closed",
+        "postedAt": "2026-10-20T08:15:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 7: GET jobs filtered by type
+Command : curl "http://localhost:3000/jobs?type=Internship"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 1,
+    "data": [
+      {
+        "id": 2,
+        "title": "Flutter Developer Intern",
+        "company": "AppNest",
+        "location": "Chattogram",
+        "type": "Internship",
+        "salary": 15000,
+        "status": "open",
+        "postedAt": "2026-11-02T10:30:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 8: GET only open jobs
+Command : curl "http://localhost:3000/jobs?status=open"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 2,
+    "data": [
+      {
+        "id": 1,
+        "title": "Junior Node.js Developer",
+        "company": "Bdtech Solutions",
+        "location": "Dhaka",
+        "type": "Full-time",
+        "salary": 45000,
+        "status": "open",
+        "postedAt": "2026-11-01T09:00:00.000Z"
+      },
+      {
+        "id": 2,
+        "title": "Flutter Developer Intern",
+        "company": "AppNest",
+        "location": "Chattogram",
+        "type": "Internship",
+        "salary": 15000,
+        "status": "open",
+        "postedAt": "2026-11-02T10:30:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 9: Route names are not case-sensitive (/JOBS still works)
+Command : curl http://localhost:3000/JOBS/1
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "title": "Junior Node.js Developer",
+      "company": "Bdtech Solutions",
+      "location": "Dhaka",
+      "type": "Full-time",
+      "salary": 45000,
+      "status": "open",
+      "postedAt": "2026-11-01T09:00:00.000Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 10: POST create a new job (gets id 4)
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Backend Engineer\",\"company\":\"CloudBD\",\"location\":\"Sylhet\",\"type\":\"Contract\",\"salary\":70000}"
+Expected: HTTP 201
+Actual  : HTTP 201  PASS
+Response:
+  {
+    "success": true,
+    "message": "Job created",
+    "data": {
+      "id": 4,
+      "title": "Backend Engineer",
+      "company": "CloudBD",
+      "location": "Sylhet",
+      "type": "Contract",
+      "salary": 70000,
+      "status": "open",
+      "postedAt": "2026-11-08T13:19:15.757Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 11: PUT update the salary of job 4
+Command : curl -X PUT http://localhost:3000/jobs/4 -H "Content-Type: application/json" -d "{\"salary\":80000}"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "message": "Job updated",
+    "data": {
+      "id": 4,
+      "title": "Backend Engineer",
+      "company": "CloudBD",
+      "location": "Sylhet",
+      "type": "Contract",
+      "salary": 80000,
+      "status": "open",
+      "postedAt": "2026-11-08T13:19:15.757Z",
+      "updatedAt": "2026-11-08T13:19:15.774Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 12: PUT close job 2 (status -> closed)
+Command : curl -X PUT http://localhost:3000/jobs/2 -H "Content-Type: application/json" -d "{\"status\":\"closed\"}"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "message": "Job updated",
+    "data": {
+      "id": 2,
+      "title": "Flutter Developer Intern",
+      "company": "AppNest",
+      "location": "Chattogram",
+      "type": "Internship",
+      "salary": 15000,
+      "status": "closed",
+      "postedAt": "2026-11-02T10:30:00.000Z",
+      "updatedAt": "2026-11-08T13:19:15.789Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+C. APPLICANTS ROUTE - VALID REQUESTS (GET, POST, PUT)
+##############################################################################
+
+TEST 13: GET all applicants
+Command : curl http://localhost:3000/applicants
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 2,
+    "data": [
+      {
+        "id": 1,
+        "name": "Rahim Uddin",
+        "email": "rahim@example.com",
+        "phone": "+8801711000001",
+        "jobId": 1,
+        "jobTitle": "Junior Node.js Developer",
+        "status": "Pending",
+        "appliedAt": "2026-11-03T11:00:00.000Z"
+      },
+      {
+        "id": 2,
+        "name": "Karim Hasan",
+        "email": "karim@example.com",
+        "phone": null,
+        "jobId": 2,
+        "jobTitle": "Flutter Developer Intern",
+        "status": "Shortlisted",
+        "appliedAt": "2026-11-04T14:20:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 14: GET one applicant by id
+Command : curl http://localhost:3000/applicants/1
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "name": "Rahim Uddin",
+      "email": "rahim@example.com",
+      "phone": "+8801711000001",
+      "jobId": 1,
+      "jobTitle": "Junior Node.js Developer",
+      "status": "Pending",
+      "appliedAt": "2026-11-03T11:00:00.000Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 15: GET applicants for job 1
+Command : curl "http://localhost:3000/applicants?jobId=1"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 1,
+    "data": [
+      {
+        "id": 1,
+        "name": "Rahim Uddin",
+        "email": "rahim@example.com",
+        "phone": "+8801711000001",
+        "jobId": 1,
+        "jobTitle": "Junior Node.js Developer",
+        "status": "Pending",
+        "appliedAt": "2026-11-03T11:00:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 16: GET applicants by status
+Command : curl "http://localhost:3000/applicants?status=Shortlisted"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "count": 1,
+    "data": [
+      {
+        "id": 2,
+        "name": "Karim Hasan",
+        "email": "karim@example.com",
+        "phone": null,
+        "jobId": 2,
+        "jobTitle": "Flutter Developer Intern",
+        "status": "Shortlisted",
+        "appliedAt": "2026-11-04T14:20:00.000Z"
+      }
+    ]
+  }
+------------------------------------------------------------------------------
+
+TEST 17: POST apply for job 4 (applicants service checks job 4 with the jobs service)
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Nadia Islam\",\"email\":\"nadia@example.com\",\"phone\":\"+8801811000002\",\"jobId\":4}"
+Expected: HTTP 201
+Actual  : HTTP 201  PASS
+Response:
+  {
+    "success": true,
+    "message": "Application submitted",
+    "data": {
+      "id": 3,
+      "name": "Nadia Islam",
+      "email": "nadia@example.com",
+      "phone": "+8801811000002",
+      "jobId": 4,
+      "jobTitle": "Backend Engineer",
+      "status": "Pending",
+      "appliedAt": "2026-11-08T13:19:15.937Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 18: PUT shortlist applicant 3
+Command : curl -X PUT http://localhost:3000/applicants/3 -H "Content-Type: application/json" -d "{\"status\":\"Shortlisted\"}"
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "message": "Applicant updated",
+    "data": {
+      "id": 3,
+      "name": "Nadia Islam",
+      "email": "nadia@example.com",
+      "phone": "+8801811000002",
+      "jobId": 4,
+      "jobTitle": "Backend Engineer",
+      "status": "Shortlisted",
+      "appliedAt": "2026-11-08T13:19:15.937Z",
+      "updatedAt": "2026-11-08T13:19:15.954Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+D. MISSPELT OR UNKNOWN ROUTES (untrained user mistakes)
+##############################################################################
+
+TEST 19: Misspelt /job instead of /jobs (gateway suggests the right route)
+Command : curl http://localhost:3000/job
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Route GET /job does not exist on the API Gateway",
+      "details": {
+        "availableRoutes": [
+          "GET    /jobs                (filters: ?location= &type= &status=)",
+          "GET    /jobs/:id",
+          "POST   /jobs",
+          "PUT    /jobs/:id",
+          "DELETE /jobs/:id",
+          "GET    /applicants          (filters: ?jobId= &status=)",
+          "GET    /applicants/:id",
+          "POST   /applicants",
+          "PUT    /applicants/:id",
+          "DELETE /applicants/:id",
+          "GET    /api                 (this list)",
+          "GET    /health              (status of each service)"
+        ],
+        "didYouMean": "/jobs"
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 20: Misspelt /jbos
+Command : curl http://localhost:3000/jbos
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Route GET /jbos does not exist on the API Gateway",
+      "details": {
+        "availableRoutes": [
+          "GET    /jobs                (filters: ?location= &type= &status=)",
+          "GET    /jobs/:id",
+          "POST   /jobs",
+          "PUT    /jobs/:id",
+          "DELETE /jobs/:id",
+          "GET    /applicants          (filters: ?jobId= &status=)",
+          "GET    /applicants/:id",
+          "POST   /applicants",
+          "PUT    /applicants/:id",
+          "DELETE /applicants/:id",
+          "GET    /api                 (this list)",
+          "GET    /health              (status of each service)"
+        ],
+        "didYouMean": "/jobs"
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 21: Misspelt /aplicants
+Command : curl http://localhost:3000/aplicants
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Route GET /aplicants does not exist on the API Gateway",
+      "details": {
+        "availableRoutes": [
+          "GET    /jobs                (filters: ?location= &type= &status=)",
+          "GET    /jobs/:id",
+          "POST   /jobs",
+          "PUT    /jobs/:id",
+          "DELETE /jobs/:id",
+          "GET    /applicants          (filters: ?jobId= &status=)",
+          "GET    /applicants/:id",
+          "POST   /applicants",
+          "PUT    /applicants/:id",
+          "DELETE /applicants/:id",
+          "GET    /api                 (this list)",
+          "GET    /health              (status of each service)"
+        ],
+        "didYouMean": "/applicants"
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 22: Completely unknown route
+Command : curl http://localhost:3000/users
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Route GET /users does not exist on the API Gateway",
+      "details": {
+        "availableRoutes": [
+          "GET    /jobs                (filters: ?location= &type= &status=)",
+          "GET    /jobs/:id",
+          "POST   /jobs",
+          "PUT    /jobs/:id",
+          "DELETE /jobs/:id",
+          "GET    /applicants          (filters: ?jobId= &status=)",
+          "GET    /applicants/:id",
+          "POST   /applicants",
+          "PUT    /applicants/:id",
+          "DELETE /applicants/:id",
+          "GET    /api                 (this list)",
+          "GET    /health              (status of each service)"
+        ]
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 23: Extra path segment after the id
+Command : curl http://localhost:3000/jobs/1/details
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Route GET /jobs/1/details not found in Jobs service"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+E. JOBS ROUTE - INVALID REQUESTS
+##############################################################################
+
+TEST 24: GET a job that does not exist
+Command : curl http://localhost:3000/jobs/999
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Job with id 999 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 25: GET with text instead of a numeric id
+Command : curl http://localhost:3000/jobs/abc
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Invalid id \"abc\". The id must be a positive whole number"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 26: GET with a negative id
+Command : curl http://localhost:3000/jobs/-1
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Invalid id \"-1\". The id must be a positive whole number"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 27: GET with id 0
+Command : curl http://localhost:3000/jobs/0
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Invalid id \"0\". The id must be a positive whole number"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 28: POST with required fields missing
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"company\" is required",
+        "\"location\" is required",
+        "\"type\" is required"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 29: POST with an invalid job type
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\",\"company\":\"QA Ltd\",\"location\":\"Dhaka\",\"type\":\"Weekend\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"type\" must be one of: Full-time, Part-time, Internship, Contract, Remote"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 30: POST with a negative salary
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\",\"company\":\"QA Ltd\",\"location\":\"Dhaka\",\"type\":\"Full-time\",\"salary\":-500}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"salary\" must be a number of 0 or more"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 31: POST with salary as text
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\",\"company\":\"QA Ltd\",\"location\":\"Dhaka\",\"type\":\"Full-time\",\"salary\":\"high\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"salary\" must be a number of 0 or more"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 32: POST with an unknown field
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\",\"company\":\"QA Ltd\",\"location\":\"Dhaka\",\"type\":\"Full-time\",\"bonus\":100}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "Unknown field(s): bonus"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 33: POST with an empty title
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"   \",\"company\":\"QA Ltd\",\"location\":\"Dhaka\",\"type\":\"Full-time\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"title\" must be a non-empty text value"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 34: POST with broken JSON (missing closing brace)
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{\"title\":\"Tester\""
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Malformed JSON in request body"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 35: POST with an empty JSON object
+Command : curl -X POST http://localhost:3000/jobs -H "Content-Type: application/json" -d "{}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Request body must be a non-empty JSON object"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 36: POST without the JSON Content-Type header
+Command : curl -X POST http://localhost:3000/jobs -d title=Tester
+Expected: HTTP 415
+Actual  : HTTP 415  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 415,
+      "message": "Content-Type must be application/json"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 37: PUT a job that does not exist
+Command : curl -X PUT http://localhost:3000/jobs/999 -H "Content-Type: application/json" -d "{\"salary\":1000}"
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Job with id 999 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 38: PUT with an invalid status
+Command : curl -X PUT http://localhost:3000/jobs/1 -H "Content-Type: application/json" -d "{\"status\":\"paused\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"status\" must be one of: open, closed"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 39: DELETE a job that does not exist
+Command : curl -X DELETE http://localhost:3000/jobs/999
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Job with id 999 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 40: PATCH is not supported (wrong HTTP verb, see Allow header)
+Command : curl -i -X PATCH http://localhost:3000/jobs/1 -H "Content-Type: application/json" -d "{\"salary\":1}"
+Expected: HTTP 405
+Actual  : HTTP 405  PASS
+Response:
+  HTTP/1.1 405 Method Not Allowed
+  Allow: GET, PUT, DELETE
+  Content-Type: application/json; charset=utf-8
+  Content-Length: 143
+  ETag: W/"8f-7OyUYmxRrY3sC3L/AuriG5s66Dg"
+  Date: Sun, 08 Nov 2026 13:19:16 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  {
+    "success": false,
+    "error": {
+      "status": 405,
+      "message": "Method PATCH is not allowed on /jobs/1",
+      "details": {
+        "allowedMethods": [
+          "GET",
+          "PUT",
+          "DELETE"
+        ]
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 41: DELETE on the whole collection is not allowed
+Command : curl -X DELETE http://localhost:3000/jobs
+Expected: HTTP 405
+Actual  : HTTP 405  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 405,
+      "message": "Method DELETE is not allowed on /jobs",
+      "details": {
+        "allowedMethods": [
+          "GET",
+          "POST"
+        ]
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 42: POST to a single job id is not allowed
+Command : curl -X POST http://localhost:3000/jobs/1 -H "Content-Type: application/json" -d "{\"title\":\"x\"}"
+Expected: HTTP 405
+Actual  : HTTP 405  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 405,
+      "message": "Method POST is not allowed on /jobs/1",
+      "details": {
+        "allowedMethods": [
+          "GET",
+          "PUT",
+          "DELETE"
+        ]
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+F. APPLICANTS ROUTE - INVALID REQUESTS
+##############################################################################
+
+TEST 43: GET an applicant that does not exist
+Command : curl http://localhost:3000/applicants/999
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Applicant with id 999 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 44: GET applicants with a non-numeric jobId filter
+Command : curl "http://localhost:3000/applicants?jobId=abc"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Invalid id \"abc\". The id must be a positive whole number"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 45: POST apply for a job that does not exist
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi@example.com\",\"jobId\":999}"
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Job with id 999 does not exist"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 46: POST apply for a closed job (job 3)
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi@example.com\",\"jobId\":3}"
+Expected: HTTP 409
+Actual  : HTTP 409  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 409,
+      "message": "Job 3 (\"UI/UX Designer\") is closed and no longer accepts applications"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 47: POST apply twice for the same job with the same email
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Rahim Uddin\",\"email\":\"rahim@example.com\",\"jobId\":1}"
+Expected: HTTP 409
+Actual  : HTTP 409  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 409,
+      "message": "rahim@example.com has already applied for job 1 (application id 1)"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 48: POST with an invalid email address
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi-at-mail\",\"jobId\":1}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"email\" must be a valid email address, e.g. name@example.com"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 49: POST with jobId sent as text
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi@example.com\",\"jobId\":\"1\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"jobId\" must be a positive whole number"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 50: POST with an invalid phone number
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi@example.com\",\"phone\":\"12ab\",\"jobId\":1}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"phone\" must contain 7 to 15 digits, optionally starting with +"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 51: POST with every field missing
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"age\":22}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "Unknown field(s): age",
+        "\"name\" is required",
+        "\"email\" is required",
+        "\"jobId\" is required"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 52: PUT trying to move an application to another job
+Command : curl -X PUT http://localhost:3000/applicants/1 -H "Content-Type: application/json" -d "{\"jobId\":2}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"jobId\" cannot be changed. Delete this application and apply again"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 53: PUT with an invalid status
+Command : curl -X PUT http://localhost:3000/applicants/1 -H "Content-Type: application/json" -d "{\"status\":\"Accepted\"}"
+Expected: HTTP 400
+Actual  : HTTP 400  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 400,
+      "message": "Validation failed",
+      "details": [
+        "\"status\" must be one of: Pending, Shortlisted, Rejected, Hired"
+      ]
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 54: DELETE an applicant that does not exist
+Command : curl -X DELETE http://localhost:3000/applicants/999
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Applicant with id 999 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 55: PATCH is not supported on applicants
+Command : curl -X PATCH http://localhost:3000/applicants/1
+Expected: HTTP 405
+Actual  : HTTP 405  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 405,
+      "message": "Method PATCH is not allowed on /applicants/1",
+      "details": {
+        "allowedMethods": [
+          "GET",
+          "PUT",
+          "DELETE"
+        ]
+      }
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+G. WRONG ACCESS - TRYING TO BYPASS THE GATEWAY
+##############################################################################
+
+TEST 56: Direct call to the internal Jobs service port is refused
+Command : curl http://localhost:3001/jobs
+Expected: HTTP 403
+Actual  : HTTP 403  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 403,
+      "message": "Direct access to this service is forbidden. Use the API Gateway on port 3000"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 57: Direct call to the internal Applicants service port is refused
+Command : curl http://localhost:3002/applicants
+Expected: HTTP 403
+Actual  : HTTP 403  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 403,
+      "message": "Direct access to this service is forbidden. Use the API Gateway on port 3000"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+H. DELETE - VALID REQUESTS
+##############################################################################
+
+TEST 58: DELETE applicant 3
+Command : curl -X DELETE http://localhost:3000/applicants/3
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "message": "Applicant 3 deleted",
+    "data": {
+      "id": 3,
+      "name": "Nadia Islam",
+      "email": "nadia@example.com",
+      "phone": "+8801811000002",
+      "jobId": 4,
+      "jobTitle": "Backend Engineer",
+      "status": "Shortlisted",
+      "appliedAt": "2026-11-08T13:19:15.937Z",
+      "updatedAt": "2026-11-08T13:19:15.954Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 59: GET deleted applicant 3 (now gone)
+Command : curl http://localhost:3000/applicants/3
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Applicant with id 3 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 60: DELETE job 4
+Command : curl -X DELETE http://localhost:3000/jobs/4
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "message": "Job 4 deleted",
+    "data": {
+      "id": 4,
+      "title": "Backend Engineer",
+      "company": "CloudBD",
+      "location": "Sylhet",
+      "type": "Contract",
+      "salary": 80000,
+      "status": "open",
+      "postedAt": "2026-11-08T13:19:15.757Z",
+      "updatedAt": "2026-11-08T13:19:15.774Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 61: GET deleted job 4 (now gone)
+Command : curl http://localhost:3000/jobs/4
+Expected: HTTP 404
+Actual  : HTTP 404  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 404,
+      "message": "Job with id 4 not found"
+    }
+  }
+------------------------------------------------------------------------------
+
+##############################################################################
+I. UNRESPONSIVE SERVICE (Jobs service stopped on purpose)
+NOTE: Stop the Jobs service (Ctrl+C in its terminal, or run only "npm run applicants" and "npm run gateway").
+##############################################################################
+
+TEST 62: GET jobs while the Jobs service is down
+Command : curl http://localhost:3000/jobs
+Expected: HTTP 503
+Actual  : HTTP 503  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 503,
+      "message": "Jobs service is currently unavailable. Please try again later"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 63: Health check shows which service is down
+Command : curl http://localhost:3000/health
+Expected: HTTP 503
+Actual  : HTTP 503  PASS
+Response:
+  {
+    "success": false,
+    "gateway": "up",
+    "services": {
+      "jobs": "down",
+      "applicants": "up"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 64: Applicants route still works on its own (services are independent)
+Command : curl http://localhost:3000/applicants/1
+Expected: HTTP 200
+Actual  : HTTP 200  PASS
+Response:
+  {
+    "success": true,
+    "data": {
+      "id": 1,
+      "name": "Rahim Uddin",
+      "email": "rahim@example.com",
+      "phone": "+8801711000001",
+      "jobId": 1,
+      "jobTitle": "Junior Node.js Developer",
+      "status": "Pending",
+      "appliedAt": "2026-11-03T11:00:00.000Z"
+    }
+  }
+------------------------------------------------------------------------------
+
+TEST 65: Applying for a job fails safely because the job cannot be checked
+Command : curl -X POST http://localhost:3000/applicants -H "Content-Type: application/json" -d "{\"name\":\"Sumi Akter\",\"email\":\"sumi@example.com\",\"jobId\":1}"
+Expected: HTTP 503
+Actual  : HTTP 503  PASS
+Response:
+  {
+    "success": false,
+    "error": {
+      "status": 503,
+      "message": "Jobs service is unavailable, so the job cannot be checked. Try again later"
+    }
+  }
+------------------------------------------------------------------------------
+
+==============================================================================
+SUMMARY: 65 of 65 tests passed
+==============================================================================

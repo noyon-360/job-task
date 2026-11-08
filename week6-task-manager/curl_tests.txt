@@ -1,0 +1,133 @@
+==========================================================================
+ TASK MANAGEMENT SYSTEM - cURL TEST SUITE (Week 6, Phase 3)
+==========================================================================
+
+Every request goes to the API GATEWAY (port 3000), never to the services
+directly. The gateway forwards /users to the User Service (port 3001) and
+/tasks to the Task Service (port 3002).
+
+How to run:
+  1. npm install
+  2. npm start
+  3. Run the commands below in a second terminal.
+
+For the live (deployed) tests, replace http://localhost:3000 with your live URL.
+
+Note for Windows (Command Prompt): use double quotes around the JSON and
+escape the inner quotes, e.g.  -d "{\"title\":\"Deploy to the cloud\"}"
+
+
+--------------------------------------------------------------------------
+TEST 1 - Successful GET request (read all tasks from tasks.json)
+--------------------------------------------------------------------------
+curl -i http://localhost:3000/tasks
+
+Expected: HTTP 200 OK
+[{"id":1,"title":"Draw architecture diagram","description":"Client, API Gateway and two microservices","userId":1,"completed":true},{"id":2,"title":"Write cURL test suite","description":"GET, POST, PUT, DELETE and a misspelt route","userId":2,"completed":false}]
+
+
+--------------------------------------------------------------------------
+TEST 2 - Successful POST request (add a new task, passing JSON data)
+--------------------------------------------------------------------------
+curl -i -X POST http://localhost:3000/tasks -H "Content-Type: application/json" -d '{"title":"Deploy to the cloud","description":"Live test","userId":1}'
+
+Expected: HTTP 201 Created - the new task is written to tasks.json
+{"id":3,"title":"Deploy to the cloud","description":"Live test","userId":1,"completed":false}
+
+
+--------------------------------------------------------------------------
+TEST 3 - Successful PUT request (mark task 3 as complete)
+--------------------------------------------------------------------------
+curl -i -X PUT http://localhost:3000/tasks/3 -H "Content-Type: application/json" -d '{"completed":true}'
+
+Expected: HTTP 200 OK - tasks.json now shows "completed": true
+{"id":3,"title":"Deploy to the cloud","description":"Live test","userId":1,"completed":true}
+
+
+--------------------------------------------------------------------------
+TEST 4 - Successful DELETE request (remove task 3)
+--------------------------------------------------------------------------
+curl -i -X DELETE http://localhost:3000/tasks/3
+
+Expected: HTTP 200 OK - task 3 is removed from tasks.json
+{"message":"Task deleted","task":{"id":3,"title":"Deploy to the cloud","description":"Live test","userId":1,"completed":true}}
+
+
+--------------------------------------------------------------------------
+TEST 5 - Invalid / misspelt route (/tassks instead of /tasks)
+--------------------------------------------------------------------------
+curl -i http://localhost:3000/tassks
+
+Expected: HTTP 404 Not Found - the gateway rejects the request itself
+and lists the routes that do exist. No service is called.
+{"error":"Route GET /tassks not found on the API Gateway","availableRoutes":["/users","/users/:id","/tasks","/tasks/:id"]}
+
+
+==========================================================================
+ EXTRA TESTS - User Service and failing gracefully
+==========================================================================
+
+--------------------------------------------------------------------------
+TEST 6 - GET all users (routed to the User Service)
+--------------------------------------------------------------------------
+curl -i http://localhost:3000/users
+
+Expected: HTTP 200 OK
+[{"id":1,"name":"Alice Smith","email":"alice@example.com"},{"id":2,"name":"Bob Khan","email":"bob@example.com"}]
+
+
+--------------------------------------------------------------------------
+TEST 7 - POST a new user
+--------------------------------------------------------------------------
+curl -i -X POST http://localhost:3000/users -H "Content-Type: application/json" -d '{"name":"Carol Lee","email":"carol@example.com"}'
+
+Expected: HTTP 201 Created
+{"id":3,"name":"Carol Lee","email":"carol@example.com"}
+
+
+--------------------------------------------------------------------------
+TEST 8 - Task that does not exist
+--------------------------------------------------------------------------
+curl -i http://localhost:3000/tasks/999
+
+Expected: HTTP 404 Not Found
+{"error":"Task not found"}
+
+
+--------------------------------------------------------------------------
+TEST 9 - POST with a missing required field (no title)
+--------------------------------------------------------------------------
+curl -i -X POST http://localhost:3000/tasks -H "Content-Type: application/json" -d '{"description":"no title"}'
+
+Expected: HTTP 400 Bad Request
+{"error":"A task must have a title"}
+
+
+--------------------------------------------------------------------------
+TEST 10 - Broken JSON in the request body
+--------------------------------------------------------------------------
+curl -i -X POST http://localhost:3000/tasks -H "Content-Type: application/json" -d '{"title": oops}'
+
+Expected: HTTP 400 Bad Request - caught by the gateway
+{"error":"Invalid JSON in request body"}
+
+
+--------------------------------------------------------------------------
+TEST 11 - Filter tasks (only completed ones)
+--------------------------------------------------------------------------
+curl -i "http://localhost:3000/tasks?completed=true"
+
+Expected: HTTP 200 OK
+[{"id":1,"title":"Draw architecture diagram","description":"Client, API Gateway and two microservices","userId":1,"completed":true}]
+
+
+--------------------------------------------------------------------------
+TEST 12 - A microservice is down (gateway fails gracefully)
+--------------------------------------------------------------------------
+Stop everything, then start ONLY the gateway:
+  npm run gateway
+Then:
+curl -i http://localhost:3000/tasks
+
+Expected: HTTP 503 Service Unavailable - the gateway does not crash
+{"error":"The tasks service is unavailable. Please try again later."}

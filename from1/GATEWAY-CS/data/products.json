@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "desc": "iPhone 5",
+    "price": 299.99
+  },
+  {
+    "id": 2,
+    "desc": "iPhone 13 mini",
+    "price": 199.99
+  }
+]
